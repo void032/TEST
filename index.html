@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EverSwap — DeFi at Peak</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            background: #0a1628;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: none;
+        }
+
+        .overlay-text {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: white;
+            text-align: center;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            z-index: 100;
+            color: white;
+            pointer-events: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            font-family: system-ui, sans-serif;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            border: 2px solid white;
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            transform: rotate(45deg);
+        }
+
+        .tagline {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-family: system-ui, sans-serif;
+        }
+
+        .coming-soon {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-family: system-ui, sans-serif;
+        }
+
+        .arrow-icon {
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-size: 0.8rem;
+        }
+
+        .nav-dots {
+            position: fixed;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid rgba(255,255,255,0.5);
+            transform: rotate(45deg);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .nav-dot.active {
+            background: rgba(255,255,255,0.8);
+            border-color: white;
+        }
+
+        .scroll-hint {
+            position: fixed;
+            bottom: 8%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 0.85rem;
+            opacity: 0.7;
+            z-index: 50;
+            font-family: system-ui, sans-serif;
+            pointer-events: none;
+        }
+
+        .everswap-title {
+            font-size: clamp(4rem, 12vw, 10rem);
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        .one-pool-title {
+            font-size: clamp(3rem, 8vw, 6rem);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .divider {
+            width: 1px;
+            height: 3rem;
+            background: rgba(255,255,255,0.5);
+        }
+
+        .subtitle {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-family: system-ui, sans-serif;
+        }
+
+        .description {
+            margin-top: 2rem;
+            font-size: 1rem;
+            opacity: 0.7;
+            max-width: 500px;
+            line-height: 1.6;
+            font-family: system-ui, sans-serif;
+        }
+
+        .diamond-icon {
+            width: 60px;
+            height: 60px;
+            border: 1px solid rgba(255,255,255,0.4);
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem auto;
+        }
+
+        .diamond-icon::after {
+            content: '×';
+            transform: rotate(-45deg);
+            font-size: 1.5rem;
+            opacity: 0.6;
+            color: white;
+        }
+
+        /* FIX 2: suppress ::after when a real SVG child is present */
+        .diamond-icon.has-svg::after {
+            content: none;
+        }
+
+        .flows-title {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+        }
+
+        .flows-title span {
+            display: block;
+            font-size: 0.4em;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .role-title {
+            font-size: clamp(2rem, 5vw, 4rem);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .role-icon {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255,255,255,0.4);
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-icon svg {
+            transform: rotate(-45deg);
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: white;
+            stroke-width: 1.5;
+        }
+
+        .redefined-title {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+        }
+
+        .final-mountain {
+            width: 200px;
+            height: 200px;
+            transform: rotate(45deg);
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.3);
+            margin-bottom: 2rem;
+        }
+
+        /* FIX 3: SVG replaces the broken img reference */
+        .final-mountain svg {
+            width: 141%;
+            height: 141%;
+            transform: rotate(-45deg) translate(-14.5%, -14.5%);
+            display: block;
+        }
+
+        .cta-button {
+            margin-top: 2rem;
+            padding: 0.8rem 2rem;
+            background: #c8e6c9;
+            color: #1a3a1a;
+            border: none;
+            border-radius: 2rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            pointer-events: auto;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .social-links a {
+            color: #1a3a1a;
+            text-decoration: none;
+            padding: 0.5rem 1.2rem;
+            background: #c8e6c9;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            pointer-events: auto;
+        }
+
+        .scroll-spacer {
+            height: 800vh;
+            position: relative;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            <span>EverSwap</span>
+        </div>
+        <div class="tagline">DeFi at Peak.</div>
+        <div class="coming-soon">
+            <span>Coming soon</span>
+            <div class="arrow-icon">↗</div>
+        </div>
+    </header>
+
+    <div class="nav-dots">
+        <div class="nav-dot active" data-section="0"></div>
+        <div class="nav-dot" data-section="1"></div>
+        <div class="nav-dot" data-section="2"></div>
+        <div class="nav-dot" data-section="3"></div>
+        <div class="nav-dot" data-section="4"></div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="scroll-hint" id="scrollHint">Scroll to start</div>
+
+    <!-- Section 0: EverSwap Title -->
+    <div class="overlay" id="overlay-everswap">
+        <h1 class="overlay-text everswap-title">EverSwap</h1>
+    </div>
+
+    <!-- Section 1: One Pool -->
+    <div class="overlay" id="overlay-onepool">
+        <div class="overlay-text one-pool-title">
+            <span>One</span>
+            <div class="divider"></div>
+            <span>Pool</span>
+        </div>
+        <p class="subtitle">Swap. Lend. Borrow.</p>
+        <div class="diamond-icon"></div>
+        <p class="description">EverSwap unifies trading, lending, and borrowing through single-sided liquidity pools.</p>
+    </div>
+
+    <!-- Section 2: Flows -->
+    <div class="overlay" id="overlay-flows">
+        <div class="overlay-text flows-title">
+            <span>Where liquidity</span>
+            Flows
+        </div>
+        <div class="diamond-icon"></div>
+        <p class="description">Smoother execution, more efficient markets, and better capital use across the system.</p>
+    </div>
+
+    <!-- Section 3: Roles -->
+    <div class="overlay" id="overlay-roles">
+        <p style="font-size: 0.8rem; margin-bottom: 1rem; opacity: 0.7; color: white; text-align: center;">Made<br>for EVERYone</p>
+        <div class="overlay-text role-title" id="role-title">
+            <div class="role-icon" id="role-icon">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg>
+            </div>
+            <span id="role-name">LPs</span>
+        </div>
+        <p class="description" id="role-desc">Deposit one asset and earn from swaps, borrowing, and internal arbitrage.</p>
+    </div>
+
+    <!-- Section 4: ReDeFined -->
+    <!-- FIX 2: added has-svg class to suppress ::after pseudo-element -->
+    <div class="overlay" id="overlay-redefined">
+        <div class="diamond-icon has-svg" style="border-color: rgba(255,255,255,0.6);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+        </div>
+        <h2 class="overlay-text redefined-title">ReDeFined</h2>
+        <p class="description">A new model for deeper, cleaner, and more efficient liquidity.</p>
+    </div>
+
+    <!-- Section 5: Final -->
+    <!-- FIX 3: replaced broken <img src="mountain-front.png"> with inline SVG -->
+    <div class="overlay" id="overlay-final">
+        <div class="final-mountain">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- Sky background -->
+                <rect width="200" height="200" fill="#5a8adc"/>
+                <!-- Back mountain layer -->
+                <polygon points="100,10 195,175 5,175" fill="#4a6c7a"/>
+                <!-- Main mountain body -->
+                <polygon points="100,10 180,175 20,175" fill="#4a7c59"/>
+                <!-- Left face shadow -->
+                <polygon points="100,10 55,100 20,175" fill="rgba(0,0,0,0.12)"/>
+                <!-- Snow cap -->
+                <polygon points="100,10 122,62 78,62" fill="rgba(255,255,255,0.65)"/>
+                <!-- Snow left edge -->
+                <polygon points="100,10 80,55 78,62" fill="rgba(255,255,255,0.4)"/>
+                <!-- Ground -->
+                <rect y="175" width="200" height="25" fill="#3a6c49"/>
+            </svg>
+        </div>
+        <p style="font-size: 0.9rem; opacity: 0.8; color: white;">Stay close to the summit</p>
+        <h2 style="font-size: clamp(2rem, 5vw, 4rem); font-family: Georgia, serif; margin: 1rem 0; color: white;">Climb with EverSwap</h2>
+        <div class="social-links">
+            <a href="#">Telegram</a>
+            <a href="#">Twitter (X)</a>
+        </div>
+    </div>
+
+    <div class="scroll-spacer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FIX 4: pinned to verified stable version (was 3.13.0 which may not exist on cdnjs) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            2000
+        );
+        camera.position.set(0, 0, 50);
+
+        // FIX 7: smoothed lookAt target — declared alongside camera so animate() can close over it
+        const currentLookAt = new THREE.Vector3(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const fogColors = [
+            new THREE.Color(0x87CEEB),
+            new THREE.Color(0x4a7c59),
+            new THREE.Color(0x2d5016),
+            new THREE.Color(0x6b4ee6),
+            new THREE.Color(0x87CEEB),
+        ];
+
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
+        scene.background = new THREE.Color(0x87CEEB);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xfff5e6, 1.5);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+
+        const fillLight = new THREE.DirectionalLight(0x87CEEB, 0.5);
+        fillLight.position.set(-10, 10, -10);
+        scene.add(fillLight);
+
+        function createMountainGeometry(width, height, segments, peakHeight, roughness) {
+            const geometry = new THREE.PlaneGeometry(width, height, segments, segments);
+            const positions = geometry.attributes.position;
+
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const y = positions.getY(i);
+
+                let z = 0;
+                let amp = peakHeight;
+                let freq = 0.02;
+
+                for (let o = 0; o < 4; o++) {
+                    z += Math.sin(x * freq + o * 1.5) * Math.cos(y * freq * 0.7 + o * 2.3) * amp;
+                    z += Math.sin(x * freq * 2.1 + y * freq * 1.3) * amp * 0.5;
+                    amp *= roughness;
+                    freq *= 2;
+                }
+
+                const distFromCenter = Math.sqrt(x * x + y * y);
+                const edgeFade = Math.max(0, 1 - distFromCenter / (width * 0.6));
+                z *= edgeFade;
+                z = Math.max(z, -height * 0.3);
+
+                positions.setZ(i, z);
+            }
+
+            geometry.computeVertexNormals();
+            return geometry;
+        }
+
+        function createMountainMaterial(color1) {
+            return new THREE.MeshStandardMaterial({
+                color: color1,
+                roughness: 0.9,
+                metalness: 0.1,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+        }
+
+        const mountainGroup = new THREE.Group();
+        scene.add(mountainGroup);
+
+        const backMountainGeo = createMountainGeometry(200, 100, 128, 25, 0.5);
+        const backMountain = new THREE.Mesh(backMountainGeo, createMountainMaterial(0x5a7a8a));
+        backMountain.rotation.x = -Math.PI / 2;
+        backMountain.position.set(0, -10, -50);
+        mountainGroup.add(backMountain);
+
+        const midMountainGeo = createMountainGeometry(150, 80, 128, 20, 0.6);
+        const midMountain = new THREE.Mesh(midMountainGeo, createMountainMaterial(0x4a7c59));
+        midMountain.rotation.x = -Math.PI / 2;
+        midMountain.position.set(20, -15, -20);
+        mountainGroup.add(midMountain);
+
+        const frontMountainGeo = createMountainGeometry(120, 60, 256, 18, 0.7);
+        const frontMountain = new THREE.Mesh(frontMountainGeo, createMountainMaterial(0x5a8a3a));
+        frontMountain.rotation.x = -Math.PI / 2;
+        frontMountain.position.set(-10, -20, 10);
+        mountainGroup.add(frontMountain);
+
+        const particleCount = 2000;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleSizes = new Float32Array(particleCount);
+
+        for (let i = 0; i < particleCount; i++) {
+            particlePositions[i * 3]     = (Math.random() - 0.5) * 300;
+            particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 100 + 20;
+            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 300;
+            particleSizes[i] = Math.random() * 2;
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        particleGeo.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+
+        const particleMat = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.5,
+            transparent: true,
+            opacity: 0.4,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(particleGeo, particleMat);
+        scene.add(particles);
+
+        const riverGeo = new THREE.PlaneGeometry(400, 400, 256, 256);
+        const riverPositions = riverGeo.attributes.position;
+
+        for (let i = 0; i < riverPositions.count; i++) {
+            const x = riverPositions.getX(i);
+            const y = riverPositions.getY(i);
+            const riverPath = Math.sin(x * 0.02) * 30 + Math.sin(x * 0.05) * 10;
+            const distToRiver = Math.abs(y - riverPath);
+            const z = distToRiver < 15 ? -5 + Math.sin(x * 0.1) * 2 : Math.random() * 3;
+            riverPositions.setZ(i, z);
+        }
+        riverGeo.computeVertexNormals();
+
+        const riverMat = new THREE.MeshStandardMaterial({
+            color: 0x4a7c59,
+            roughness: 1,
+            metalness: 0,
+            flatShading: true
+        });
+
+        const riverPlane = new THREE.Mesh(riverGeo, riverMat);
+        riverPlane.rotation.x = -Math.PI / 2;
+        riverPlane.position.set(0, -100, -200);
+        riverPlane.visible = false;
+        scene.add(riverPlane);
+
+        const waterGeo = new THREE.PlaneGeometry(400, 20, 64, 8);
+        const waterMat = new THREE.MeshStandardMaterial({
+            color: 0x6ab7ff,
+            roughness: 0.2,
+            metalness: 0.8,
+            transparent: true,
+            opacity: 0.8
+        });
+        const waterPlane = new THREE.Mesh(waterGeo, waterMat);
+        waterPlane.rotation.x = -Math.PI / 2;
+        waterPlane.position.set(0, -98, -200);
+        waterPlane.visible = false;
+        scene.add(waterPlane);
+
+        const portalGeo = new THREE.SphereGeometry(50, 64, 64);
+        const portalMat = new THREE.MeshStandardMaterial({
+            color: 0x6b4ee6,
+            roughness: 0.4,
+            metalness: 0.6,
+            emissive: 0x4a3ab0,
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0
+        });
+        const portal = new THREE.Mesh(portalGeo, portalMat);
+        portal.position.set(0, 0, -400);
+        scene.add(portal);
+
+        // FIX 1: last keyframe fogColorT changed from 0 → 4
+        // (both are 0x87CEEB sky blue, but 0 caused the lerp to walk through
+        //  mountain green, deep forest, and purple during the final 5% of scroll)
+        const cameraPath = {
+            0:    [0,   0,   50,  0, 0,   0,   0.015, 0],
+            0.15: [0,   5,   20,  0, 10, -30,  0.02,  0],
+            0.25: [0,  15,  -10,  0,  0, -50,  0.025, 1],
+            0.35: [0,  80, -100,  0,  0, -200, 0.02,  1],
+            0.5:  [0, 100, -200,  0,  0, -300, 0.015, 2],
+            0.65: [0,  50, -300,  0,  0, -400, 0.03,  3],
+            0.75: [0,   0, -380,  0,  0, -450, 0.04,  3],
+            0.85: [0, -10, -300,  0,  0, -200, 0.025, 4],
+            0.95: [0,   0, -100,  0,  0,   0,  0.015, 4],
+            1:    [0,   0,   50,  0,  0,   0,  0.015, 4], // was 0 — caused color flash
+        };
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function getCameraState(progress) {
+            const keys = Object.keys(cameraPath).map(Number).sort((a, b) => a - b);
+
+            let prev = keys[0];
+            let next = keys[keys.length - 1];
+
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (progress >= keys[i] && progress <= keys[i + 1]) {
+                    prev = keys[i];
+                    next = keys[i + 1];
+                    break;
+                }
+            }
+
+            const segmentProgress = (progress - prev) / (next - prev);
+            const ease = segmentProgress < 0.5
+                ? 4 * segmentProgress * segmentProgress * segmentProgress
+                : 1 - Math.pow(-2 * segmentProgress + 2, 3) / 2;
+
+            const p1 = cameraPath[prev];
+            const p2 = cameraPath[next];
+
+            return {
+                pos:        [lerp(p1[0], p2[0], ease), lerp(p1[1], p2[1], ease), lerp(p1[2], p2[2], ease)],
+                lookAt:     [lerp(p1[3], p2[3], ease), lerp(p1[4], p2[4], ease), lerp(p1[5], p2[5], ease)],
+                fogDensity: lerp(p1[6], p2[6], ease),
+                fogColorT:  lerp(p1[7], p2[7], ease)
+            };
+        }
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        let scrollProgress = 0;
+
+        ScrollTrigger.create({
+            trigger: ".scroll-spacer",
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 1.5,
+            onUpdate: (self) => {
+                scrollProgress = self.progress;
+            }
+        });
+
+        const overlays = {
+            everswap:  document.getElementById('overlay-everswap'),
+            onepool:   document.getElementById('overlay-onepool'),
+            flows:     document.getElementById('overlay-flows'),
+            roles:     document.getElementById('overlay-roles'),
+            redefined: document.getElementById('overlay-redefined'),
+            final:     document.getElementById('overlay-final')
+        };
+
+        // FIX 6: use gsap.set (instant) instead of gsap.to with duration: 0.5
+        // The old animated fade-in raced with the scroll-driven fade-out
+        // which starts at 0% scroll — any early scroll would produce a conflict.
+        gsap.set(overlays.everswap, { opacity: 1 });
+
+        gsap.to(overlays.everswap, {
+            scrollTrigger: {
+                trigger: ".scroll-spacer",
+                start: "0% top",
+                end: "15% top",
+                scrub: true
+            },
+            opacity: 0,
+            scale: 1.3,
+            y: -50
+        });
+
+        gsap.to("#scrollHint", {
+            scrollTrigger: {
+                trigger: ".scroll-spacer",
+                start: "0% top",
+                end: "5% top",
+                scrub: true
+            },
+            opacity: 0
+        });
+
+        gsap.fromTo(overlays.onepool,
+            { opacity: 0, scale: 0.8 },
+            {
+                scrollTrigger: {
+                    trigger: ".scroll-spacer",
+                    start: "15% top",
+                    end: "25% top",
+                    scrub: true
+                },
+                opacity: 1,
+                scale: 1
+            }
+        );
+
+        gsap.to(overlays.onepool, {
+            scrollTrigger: {
+                trigger: ".scroll-spacer",
+                start: "25% top",
+                end: "35% top",
+                scrub: true
+            },
+            opacity: 0,
+            y: -100
+        });
+
+        gsap.fromTo(overlays.flows,
+            { opacity: 0, y: 50 },
+            {
+                scrollTrigger: {
+                    trigger: ".scroll-spacer",
+                    start: "30% top",
+                    end: "40% top",
+                    scrub: true
+                },
+                opacity: 1,
+                y: 0
+            }
+        );
+
+        gsap.to(overlays.flows, {
+            scrollTrigger: {
+                trigger: ".scroll-spacer",
+                start: "45% top",
+                end: "55% top",
+                scrub: true
+            },
+            opacity: 0,
+            scale: 0.9
+        });
+
+        const roles = [
+            { name: 'LPs',       desc: 'Deposit one asset and earn from swaps, borrowing, and internal arbitrage.',                          icon: '<svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg>' },
+            { name: 'Borrowers', desc: 'Access capital through single-asset collateral and a borrowing model built for changing markets.',    icon: '<svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>' },
+            { name: 'Traders',   desc: 'Get better execution with direct swaps, cleaner routing, and more efficient markets.',               icon: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>' }
+        ];
+
+        gsap.fromTo(overlays.roles,
+            { opacity: 0 },
+            {
+                scrollTrigger: {
+                    trigger: ".scroll-spacer",
+                    start: "50% top",
+                    end: "55% top",
+                    scrub: true
+                },
+                opacity: 1
+            }
+        );
+
+        ScrollTrigger.create({
+            trigger: ".scroll-spacer",
+            start: "55% top",
+            end: "70% top",
+            onUpdate: (self) => {
+                const roleIndex = Math.min(2, Math.floor(self.progress * 3));
+                const role = roles[roleIndex];
+                document.getElementById('role-name').textContent = role.name;
+                document.getElementById('role-desc').textContent = role.desc;
+                document.getElementById('role-icon').innerHTML = role.icon;
+            }
+        });
+
+        gsap.to(overlays.roles, {
+            scrollTrigger: {
+                trigger: ".scroll-spacer",
+                start: "70% top",
+                end: "75% top",
+                scrub: true
+            },
+            opacity: 0,
+            x: -100
+        });
+
+        gsap.fromTo(overlays.redefined,
+            { opacity: 0, scale: 1.2 },
+            {
+                scrollTrigger: {
+                    trigger: ".scroll-spacer",
+                    start: "72% top",
+                    end: "80% top",
+                    scrub: true
+                },
+                opacity: 1,
+                scale: 1
+            }
+        );
+
+        gsap.to(overlays.redefined, {
+            scrollTrigger: {
+                trigger: ".scroll-spacer",
+                start: "85% top",
+                end: "90% top",
+                scrub: true
+            },
+            opacity: 0,
+            y: 50
+        });
+
+        gsap.fromTo(overlays.final,
+            { opacity: 0 },
+            {
+                scrollTrigger: {
+                    trigger: ".scroll-spacer",
+                    start: "88% top",
+                    end: "95% top",
+                    scrub: true
+                },
+                opacity: 1
+            }
+        );
+
+        ScrollTrigger.create({
+            trigger: ".scroll-spacer",
+            start: "top top",
+            end: "bottom bottom",
+            onUpdate: (self) => {
+                const p = self.progress;
+                const dots = document.querySelectorAll('.nav-dot');
+                dots.forEach(d => d.classList.remove('active'));
+                if (p < 0.2)      dots[0].classList.add('active');
+                else if (p < 0.4) dots[1].classList.add('active');
+                else if (p < 0.6) dots[2].classList.add('active');
+                else if (p < 0.8) dots[3].classList.add('active');
+                else              dots[4].classList.add('active');
+            }
+        });
+
+        // ─── RENDER LOOP ──────────────────────────────────────────────────────────
+
+        const clock = new THREE.Clock();
+        // FIX 5 + 7: track elapsed time manually so we can compute delta
+        // without the getElapsedTime / getDelta double-call conflict in THREE.Clock
+        let prevTime = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = clock.getElapsedTime();
+
+            // FIX 5: frame-rate-independent lerp
+            // Clamped to 0.1s to avoid a large jump when the tab was backgrounded.
+            // Math.pow(0.9, delta * 60) normalises the smoothing to 60fps feel:
+            //   at 60fps  → alpha ≈ 0.10  (same as the original × 0.1)
+            //   at 120fps → alpha ≈ 0.051 (half per frame, same visual result)
+            //   at 30fps  → alpha ≈ 0.19  (more per frame, same visual result)
+            const delta = Math.min(time - prevTime, 0.1);
+            prevTime = time;
+
+            const alpha    = 1 - Math.pow(0.9,  delta * 60);
+            const fogAlpha = 1 - Math.pow(0.95, delta * 60); // gentler for fog density
+
+            const state = getCameraState(scrollProgress);
+
+            camera.position.x += (state.pos[0] - camera.position.x) * alpha;
+            camera.position.y += (state.pos[1] - camera.position.y) * alpha;
+            camera.position.z += (state.pos[2] - camera.position.z) * alpha;
+
+            // FIX 7: smooth the lookAt target with the same alpha as position
+            // so heading and movement stay in sync (previously lookAt snapped
+            // directly to the keyframe-lerped value while position got an extra pass)
+            currentLookAt.x += (state.lookAt[0] - currentLookAt.x) * alpha;
+            currentLookAt.y += (state.lookAt[1] - currentLookAt.y) * alpha;
+            currentLookAt.z += (state.lookAt[2] - currentLookAt.z) * alpha;
+            camera.lookAt(currentLookAt);
+
+            scene.fog.density += (state.fogDensity - scene.fog.density) * fogAlpha;
+
+            const colorIndex     = Math.floor(state.fogColorT);
+            const nextColorIndex = Math.min(colorIndex + 1, fogColors.length - 1);
+            const colorT         = state.fogColorT - colorIndex;
+
+            const currentFogColor = fogColors[colorIndex].clone().lerp(fogColors[nextColorIndex], colorT);
+            scene.fog.color.copy(currentFogColor);
+            scene.background.copy(currentFogColor);
+
+            const positions = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3 + 1] += Math.sin(time * 0.5 + i) * 0.02;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            portal.rotation.y = time * 0.2;
+            portal.rotation.z = time * 0.1;
+
+            const showRiver = camera.position.y > 40 && camera.position.z < -50;
+            riverPlane.visible = showRiver;
+            waterPlane.visible = showRiver;
+
+            const portalDist = camera.position.distanceTo(portal.position);
+            portal.material.opacity = Math.max(0, 1 - portalDist / 100) * 0.8;
+
+            if (waterPlane.visible) {
+                waterPlane.position.y = -98 + Math.sin(time * 2) * 0.5;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        document.querySelectorAll('.nav-dot').forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const positions = [0, 0.25, 0.45, 0.65, 0.88];
+                const spacer = document.querySelector('.scroll-spacer');
+                const scrollTarget = spacer.offsetTop + positions[index] * spacer.offsetHeight;
+                window.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

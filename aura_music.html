@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA — Cinematic Music Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #e8e0f0;
+            --bg-secondary: #f0f0f5;
+            --bg-dark: #1a1a2e;
+            --text-primary: #1a1a2e;
+            --text-inverse: #f0f0f5;
+            --text-secondary: #6b6b8a;
+            --accent-purple: #9b7ede;
+            --accent-blue: #6b8cff;
+            --accent-pink: #e8a0d9;
+            --accent-glow: rgba(155, 126, 222, 0.3);
+            --glass: rgba(255, 255, 255, 0.1);
+            --border: rgba(26, 26, 46, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: auto;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* Custom Cursor */
+        .cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid var(--accent-purple);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background 0.3s;
+            mix-blend-mode: difference;
+        }
+
+        .cursor.hover {
+            width: 40px;
+            height: 40px;
+            background: rgba(155, 126, 222, 0.15);
+        }
+
+        .cursor-dot {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-purple);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Three.js Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        #three-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Scroll Container */
+        .scroll-container {
+            position: relative;
+            z-index: 1;
+            height: 900vh;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.6s, transform 0.6s;
+            pointer-events: auto;
+        }
+
+        .nav.hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+
+        .nav-logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-primary);
+        }
+
+        .nav-logo span {
+            font-style: italic;
+            font-weight: 300;
+            color: var(--accent-purple);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+            position: relative;
+        }
+
+        .nav-links a::before {
+            content: '[';
+            margin-right: 4px;
+            opacity: 0.5;
+        }
+
+        .nav-links a::after {
+            content: ']';
+            margin-left: 4px;
+            opacity: 0.5;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-purple);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            right: 32px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2px;
+            height: 200px;
+            background: var(--border);
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .progress-fill {
+            width: 100%;
+            background: var(--accent-purple);
+            height: 0%;
+            transition: height 0.1s linear;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--accent-purple);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .progress-labels {
+            position: fixed;
+            right: 52px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            pointer-events: none;
+        }
+
+        .progress-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            opacity: 0.4;
+            transition: opacity 0.3s, color 0.3s;
+            text-align: right;
+        }
+
+        .progress-label.active {
+            opacity: 1;
+            color: var(--accent-purple);
+        }
+
+        /* Text Overlay System */
+        .text-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .text-beat {
+            position: absolute;
+            text-align: center;
+            max-width: 700px;
+            padding: 0 24px;
+            opacity: 0;
+            transform: translateY(50px);
+            filter: blur(10px);
+        }
+
+        .text-beat .label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent-purple);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .text-beat .headline {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 400;
+            line-height: 1.0;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .text-beat .accent {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-weight: 300;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            color: var(--accent-purple);
+            display: block;
+            line-height: 1.1;
+        }
+
+        .text-beat .body {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 400;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-top: 20px;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .text-beat .email {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-purple);
+            margin-top: 24px;
+            display: inline-block;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .text-beat .email:hover {
+            opacity: 0.7;
+        }
+
+        /* Sound Toggle */
+        .sound-toggle {
+            position: fixed;
+            bottom: 32px;
+            left: 32px;
+            z-index: 100;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .sound-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: border-color 0.3s, background 0.3s;
+        }
+
+        .sound-btn:hover {
+            border-color: var(--accent-purple);
+            background: rgba(155, 126, 222, 0.1);
+        }
+
+        .sound-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-secondary);
+            fill: none;
+            stroke-width: 1.5;
+            transition: stroke 0.3s;
+        }
+
+        .sound-btn:hover svg {
+            stroke: var(--accent-purple);
+        }
+
+        .sound-btn.on svg {
+            stroke: var(--accent-purple);
+        }
+
+        .sound-waves {
+            position: absolute;
+            bottom: 88px;
+            left: 32px;
+            z-index: 100;
+            display: flex;
+            gap: 3px;
+            align-items: flex-end;
+            height: 24px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .sound-waves.active {
+            opacity: 1;
+        }
+
+        .wave-bar {
+            width: 2px;
+            background: var(--accent-purple);
+            border-radius: 1px;
+            animation: wave 1.2s ease-in-out infinite;
+        }
+
+        .wave-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+        .wave-bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { height: 12px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { height: 20px; animation-delay: 0.15s; }
+        .wave-bar:nth-child(5) { height: 10px; animation-delay: 0.05s; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.6); }
+            50% { transform: scaleY(1); }
+        }
+
+        /* Reimagine Button */
+        .reimagine-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 100;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .reimagine-inner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .reimagine-inner:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            background: rgba(155, 126, 222, 0.1);
+        }
+
+        .reimagine-inner svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        /* Scroll Indicator */
+        .scroll-hint {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 1;
+            transition: opacity 0.6s;
+            pointer-events: none;
+        }
+
+        .scroll-hint.hidden {
+            opacity: 0;
+        }
+
+        .scroll-hint span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .scroll-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--accent-purple), transparent);
+            animation: scrollPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes scrollPulse {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.5); }
+            50% { opacity: 1; transform: scaleY(1); }
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s ease-out, visibility 1s;
+        }
+
+        .loading-screen.done {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loading-logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 400;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            margin-bottom: 32px;
+        }
+
+        .loading-logo span {
+            font-style: italic;
+            color: var(--accent-purple);
+        }
+
+        .loading-bar {
+            width: 120px;
+            height: 1px;
+            background: var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: var(--accent-purple);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .loading-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-top: 16px;
+        }
+
+        /* Grain Overlay */
+        .grain-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+        }
+
+        /* Vignette */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 4;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(26, 26, 46, 0.15) 100%);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            z-index: 101;
+        }
+
+        .mobile-menu-btn span {
+            width: 24px;
+            height: 1px;
+            background: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: 20px 24px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .progress-bar,
+            .progress-labels {
+                display: none;
+            }
+
+            .text-beat .headline,
+            .text-beat .accent {
+                font-size: clamp(2rem, 10vw, 3.5rem);
+            }
+
+            .cursor, .cursor-dot {
+                display: none;
+            }
+
+            body {
+                cursor: auto;
+            }
+
+            .reimagine-inner {
+                padding: 10px 18px;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading">
+        <div class="loading-logo">AU<span>RA</span></div>
+        <div class="loading-bar">
+            <div class="loading-fill" id="loading-fill"></div>
+        </div>
+        <div class="loading-text" id="loading-text">Initializing experience...</div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-dot" id="cursor-dot"></div>
+
+    <!-- Three.js Canvas -->
+    <div id="canvas-container">
+        <canvas id="three-canvas"></canvas>
+    </div>
+
+    <!-- Grain Overlay -->
+    <div class="grain-overlay"></div>
+    <div class="vignette"></div>
+
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-logo">AU<span>RA</span></div>
+        <ul class="nav-links">
+            <li><a href="#" data-scroll="0.1">[Work]</a></li>
+            <li><a href="#" data-scroll="0.3">[Philosophy]</a></li>
+            <li><a href="#" data-scroll="0.6">[Sound]</a></li>
+            <li><a href="#" data-scroll="0.9">[Contact]</a></li>
+        </ul>
+        <div class="mobile-menu-btn" id="mobile-menu-btn">
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-labels">
+        <div class="progress-label" data-section="0">OPENING</div>
+        <div class="progress-label" data-section="1">INTRO</div>
+        <div class="progress-label" data-section="2">PHILOSOPHY</div>
+        <div class="progress-label" data-section="3">TRANSITION</div>
+        <div class="progress-label" data-section="4">SOUND</div>
+        <div class="progress-label" data-section="5">CLIMAX</div>
+        <div class="progress-label" data-section="6">RESOLUTION</div>
+        <div class="progress-label" data-section="7">END</div>
+    </div>
+
+    <!-- Text Overlay System -->
+    <div class="text-overlay" id="text-overlay">
+        <!-- Beat 1: Opening -->
+        <div class="text-beat" id="beat-1">
+            <h1 class="headline">The power of</h1>
+            <span class="accent">sound</span>
+        </div>
+
+        <!-- Beat 2: Introduction -->
+        <div class="text-beat" id="beat-2">
+            <h1 class="headline">In a world that's constantly</h1>
+            <span class="accent">shifting</span>
+        </div>
+
+        <!-- Beat 3: Philosophy -->
+        <div class="text-beat" id="beat-3">
+            <span class="label">Our Philosophy</span>
+            <h1 class="headline">We create</h1>
+            <span class="accent">experiences</span>
+            <p class="body">That bridge the gap between imagination and reality through immersive sonic landscapes</p>
+        </div>
+
+        <!-- Beat 4: Transition -->
+        <div class="text-beat" id="beat-4">
+            <h1 class="headline">That</h1>
+            <span class="accent">move</span>
+            <p class="body">people to feel, think, and act in ways words alone cannot express</p>
+        </div>
+
+        <!-- Beat 5: The Work -->
+        <div class="text-beat" id="beat-5">
+            <span class="label">The Work</span>
+            <h1 class="headline">And transform</h1>
+            <span class="accent">brands</span>
+            <p class="body">Into stories that resonate across cultures, generations, and dimensions</p>
+        </div>
+
+        <!-- Beat 6: Climax -->
+        <div class="text-beat" id="beat-6">
+            <h1 class="headline">Into stories</h1>
+            <span class="accent">worth telling</span>
+        </div>
+
+        <!-- Beat 7: Resolution -->
+        <div class="text-beat" id="beat-7">
+            <span class="label">Your Turn</span>
+            <h1 class="headline">Let's write</h1>
+            <span class="accent">yours</span>
+            <a href="mailto:hello@auramusic.com" class="email">hello@auramusic.com</a>
+        </div>
+
+        <!-- Beat 8: End / CTA -->
+        <div class="text-beat" id="beat-8">
+            <h1 class="headline">Begin your</h1>
+            <span class="accent">journey</span>
+            <p class="body">Scroll back up to relive the experience, or reach out to start something extraordinary</p>
+        </div>
+    </div>
+
+    <!-- Scroll Container (invisible, provides scroll distance) -->
+    <div class="scroll-container" id="scroll-container"></div>
+
+    <!-- Scroll Hint -->
+    <div class="scroll-hint" id="scroll-hint">
+        <span>Scroll to explore</span>
+        <div class="scroll-line"></div>
+    </div>
+
+    <!-- Sound Toggle -->
+    <div class="sound-toggle" id="sound-toggle">
+        <button class="sound-btn" id="sound-btn" aria-label="Toggle sound">
+            <svg viewBox="0 0 24 24" id="sound-icon">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/>
+            </svg>
+        </button>
+    </div>
+    <div class="sound-waves" id="sound-waves">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+    </div>
+
+    <!-- Reimagine Button -->
+    <div class="reimagine-btn" id="reimagine-btn">
+        <button class="reimagine-inner" id="reimagine-inner">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+            <span>Reimagine Aura</span>
+        </button>
+    </div>
+
+    <script>
+        // ============================================
+        // AURA — Cinematic Scroll-Driven Music Experience
+        // ============================================
+
+        // --- State ---
+        const state = {
+            scrollProgress: 0,
+            soundOn: false,
+            audioContext: null,
+            navVisible: true,
+            isMobile: window.innerWidth < 768,
+            mouseX: 0,
+            mouseY: 0,
+            targetMouseX: 0,
+            targetMouseY: 0
+        };
+
+        // --- DOM Elements ---
+        const cursor = document.getElementById('cursor');
+        const cursorDot = document.getElementById('cursor-dot');
+        const loadingScreen = document.getElementById('loading');
+        const loadingFill = document.getElementById('loading-fill');
+        const loadingText = document.getElementById('loading-text');
+        const progressFill = document.getElementById('progress-fill');
+        const scrollHint = document.getElementById('scroll-hint');
+        const nav = document.getElementById('nav');
+        const soundBtn = document.getElementById('sound-btn');
+        const soundWaves = document.getElementById('sound-waves');
+        const reimagineBtn = document.getElementById('reimagine-inner');
+
+        // --- Custom Cursor ---
+        if (!state.isMobile) {
+            document.addEventListener('mousemove', (e) => {
+                state.targetMouseX = e.clientX;
+                state.targetMouseY = e.clientY;
+            });
+
+            // Magnetic effect on interactive elements
+            document.querySelectorAll('a, button, .sound-btn, .reimagine-inner').forEach(el => {
+                el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+                el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+            });
+        }
+
+        function updateCursor() {
+            if (state.isMobile) return;
+            state.mouseX += (state.targetMouseX - state.mouseX) * 0.15;
+            state.mouseY += (state.targetMouseY - state.mouseY) * 0.15;
+            cursor.style.left = state.mouseX + 'px';
+            cursor.style.top = state.mouseY + 'px';
+            cursorDot.style.left = state.targetMouseX + 'px';
+            cursorDot.style.top = state.targetMouseY + 'px';
+            requestAnimationFrame(updateCursor);
+        }
+        updateCursor();
+
+        // ============================================
+        // THREE.JS 3D SCENE
+        // ============================================
+
+        const canvas = document.getElementById('three-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xe8e0f0, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 8);
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            antialias: true,
+            alpha: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0xe8e0f0, 1);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+
+        // --- Camera Target ---
+        const cameraTarget = new THREE.Vector3(0, 0, 0);
+
+        // --- Lighting System ---
+        const ambientLight = new THREE.AmbientLight(0x9b7ede, 0.4);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        keyLight.position.set(5, 5, 5);
+        scene.add(keyLight);
+
+        const rimLight = new THREE.SpotLight(0xe8a0d9, 2.0);
+        rimLight.position.set(-5, 3, -5);
+        rimLight.lookAt(0, 0, 0);
+        scene.add(rimLight);
+
+        const fillLight = new THREE.PointLight(0x6b8cff, 0.8, 20);
+        fillLight.position.set(3, -2, 3);
+        scene.add(fillLight);
+
+        const pointLight2 = new THREE.PointLight(0x9b7ede, 0.6, 15);
+        pointLight2.position.set(-3, 2, 4);
+        scene.add(pointLight2);
+
+        const pointLight3 = new THREE.PointLight(0xe8a0d9, 0.5, 15);
+        pointLight3.position.set(0, -3, -2);
+        scene.add(pointLight3);
+
+        // --- Hero Subject: Ethereal Organic Form (Jellyfish-like) ---
+        const heroGroup = new THREE.Group();
+
+        // Main body - Icosahedron with custom shader material
+        const bodyGeometry = new THREE.IcosahedronGeometry(1.2, 4);
+
+        // Custom glass-like material
+        const bodyMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x9b7ede,
+            metalness: 0.1,
+            roughness: 0.1,
+            transmission: 0.6,
+            thickness: 2.0,
+            ior: 1.5,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.1,
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide
+        });
+
+        const heroBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        heroGroup.add(heroBody);
+
+        // Inner core - glowing sphere
+        const coreGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+        const coreMaterial = new THREE.MeshBasicMaterial({
+            color: 0xe8a0d9,
+            transparent: true,
+            opacity: 0.3
+        });
+        const heroCore = new THREE.Mesh(coreGeometry, coreMaterial);
+        heroGroup.add(heroCore);
+
+        // Tentacles - using curves
+        const tentacleCount = 12;
+        const tentacles = [];
+
+        for (let i = 0; i < tentacleCount; i++) {
+            const angle = (i / tentacleCount) * Math.PI * 2;
+            const radius = 0.4 + Math.random() * 0.3;
+
+            const points = [];
+            const segments = 20;
+            for (let j = 0; j <= segments; j++) {
+                const t = j / segments;
+                const x = Math.cos(angle) * radius * (1 - t * 0.5) + Math.sin(t * 3 + i) * 0.2;
+                const y = -t * 3 - Math.sin(t * 2) * 0.5;
+                const z = Math.sin(angle) * radius * (1 - t * 0.5) + Math.cos(t * 3 + i) * 0.2;
+                points.push(new THREE.Vector3(x, y, z));
+            }
+
+            const curve = new THREE.CatmullRomCurve3(points);
+            const tubeGeometry = new THREE.TubeGeometry(curve, 32, 0.02, 8, false);
+            const tubeMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x9b7ede,
+                transparent: true,
+                opacity: 0.4,
+                roughness: 0.2
+            });
+            const tentacle = new THREE.Mesh(tubeGeometry, tubeMaterial);
+            tentacle.userData = { angle: angle, index: i };
+            tentacles.push(tentacle);
+            heroGroup.add(tentacle);
+        }
+
+        scene.add(heroGroup);
+
+        // --- Particle System (Atmosphere) ---
+        const particleCount = state.isMobile ? 3000 : 12000;
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const velocities = new Float32Array(particleCount * 3);
+
+        const color1 = new THREE.Color(0x9b7ede);
+        const color2 = new THREE.Color(0xe8a0d9);
+        const color3 = new THREE.Color(0x6b8cff);
+
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+
+            // Spherical distribution with noise
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 2 + Math.random() * 8;
+
+            positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i3 + 2] = r * Math.cos(phi);
+
+            // Color mixing
+            const mixFactor = Math.random();
+            let color;
+            if (mixFactor < 0.33) color = color1;
+            else if (mixFactor < 0.66) color = color2;
+            else color = color3;
+
+            colors[i3] = color.r;
+            colors[i3 + 1] = color.g;
+            colors[i3 + 2] = color.b;
+
+            sizes[i] = 0.02 + Math.random() * 0.04;
+
+            velocities[i3] = (Math.random() - 0.5) * 0.002;
+            velocities[i3 + 1] = (Math.random() - 0.5) * 0.002;
+            velocities[i3 + 2] = (Math.random() - 0.5) * 0.002;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // --- Floating Debris (Geometric Shapes) ---
+        const debrisGroup = new THREE.Group();
+        const debrisGeometries = [
+            new THREE.OctahedronGeometry(0.15, 0),
+            new THREE.TetrahedronGeometry(0.12, 0),
+            new THREE.BoxGeometry(0.1, 0.1, 0.1),
+            new THREE.IcosahedronGeometry(0.08, 0)
+        ];
+        const debrisMaterials = [
+            new THREE.MeshPhysicalMaterial({ color: 0x9b7ede, transparent: true, opacity: 0.3, metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshPhysicalMaterial({ color: 0xe8a0d9, transparent: true, opacity: 0.3, metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshPhysicalMaterial({ color: 0x6b8cff, transparent: true, opacity: 0.3, metalness: 0.8, roughness: 0.2 })
+        ];
+
+        for (let i = 0; i < 30; i++) {
+            const geo = debrisGeometries[Math.floor(Math.random() * debrisGeometries.length)];
+            const mat = debrisMaterials[Math.floor(Math.random() * debrisMaterials.length)];
+            const mesh = new THREE.Mesh(geo, mat);
+
+            mesh.position.set(
+                (Math.random() - 0.5) * 12,
+                (Math.random() - 0.5) * 12,
+                (Math.random() - 0.5) * 8
+            );
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+            mesh.userData = {
+                rotSpeed: {
+                    x: (Math.random() - 0.5) * 0.01,
+                    y: (Math.random() - 0.5) * 0.01,
+                    z: (Math.random() - 0.5) * 0.01
+                },
+                floatSpeed: 0.2 + Math.random() * 0.5,
+                floatOffset: Math.random() * Math.PI * 2
+            };
+            debrisGroup.add(mesh);
+        }
+        scene.add(debrisGroup);
+
+        // --- Ground Plane (Reflective) ---
+        const groundGeometry = new THREE.PlaneGeometry(50, 50);
+        const groundMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xe8e0f0,
+            metalness: 0.1,
+            roughness: 0.05,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -4;
+        scene.add(ground);
+
+        // --- Bloom Post-Processing (Simulated with additive blending layers) ---
+        // Since we can't use EffectComposer without extra imports, we'll simulate bloom
+        // by adding a glow mesh around the hero
+        const glowGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: 0x9b7ede,
+            transparent: true,
+            opacity: 0.05,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+        heroGroup.add(glowMesh);
+
+        // Second glow layer
+        const glowGeometry2 = new THREE.SphereGeometry(4, 32, 32);
+        const glowMaterial2 = new THREE.MeshBasicMaterial({
+            color: 0xe8a0d9,
+            transparent: true,
+            opacity: 0.02,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const glowMesh2 = new THREE.Mesh(glowGeometry2, glowMaterial2);
+        heroGroup.add(glowMesh2);
+
+        // ============================================
+        // GSAP SCROLLTRIGGER SETUP
+        // ============================================
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Loading animation
+        let loadProgress = 0;
+        const loadInterval = setInterval(() => {
+            loadProgress += Math.random() * 15;
+            if (loadProgress >= 100) {
+                loadProgress = 100;
+                clearInterval(loadInterval);
+                loadingFill.style.width = '100%';
+                loadingText.textContent = 'Experience ready';
+                setTimeout(() => {
+                    loadingScreen.classList.add('done');
+                }, 500);
+            } else {
+                loadingFill.style.width = loadProgress + '%';
+                if (loadProgress < 30) loadingText.textContent = 'Loading 3D engine...';
+                else if (loadProgress < 60) loadingText.textContent = 'Generating particles...';
+                else if (loadProgress < 90) loadingText.textContent = 'Composing scene...';
+            }
+        }, 200);
+
+        // Master Timeline
+        const masterTl = gsap.timeline({
+            scrollTrigger: {
+                trigger: '#scroll-container',
+                start: 'top top',
+                end: 'bottom bottom',
+                scrub: 1.5,
+                invalidateOnRefresh: true,
+                onUpdate: (self) => {
+                    state.scrollProgress = self.progress;
+
+                    // Update progress bar
+                    progressFill.style.height = (self.progress * 100) + '%';
+
+                    // Update progress labels
+                    const sectionIndex = Math.min(Math.floor(self.progress * 8), 7);
+                    document.querySelectorAll('.progress-label').forEach((label, i) => {
+                        label.classList.toggle('active', i === sectionIndex);
+                    });
+
+                    // Hide scroll hint after scrolling
+                    if (self.progress > 0.05) {
+                        scrollHint.classList.add('hidden');
+                    }
+
+                    // Nav visibility
+                    if (self.progress > 0.02 && self.progress < 0.95) {
+                        if (state.navVisible) {
+                            nav.classList.add('hidden');
+                            state.navVisible = false;
+                        }
+                    } else {
+                        if (!state.navVisible) {
+                            nav.classList.remove('hidden');
+                            state.navVisible = true;
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- Camera Path Animation ---
+        masterTl.to(camera.position, {
+            x: 0, y: 0, z: 8,
+            duration: 1, ease: 'none'
+        }, 0);
+
+        masterTl.to(camera.position, {
+            x: 0, y: 2, z: 5,
+            duration: 1, ease: 'power2.inOut'
+        }, 1);
+
+        masterTl.to(camera.position, {
+            x: 3, y: 1, z: 3,
+            duration: 1.5, ease: 'power1.inOut'
+        }, 2);
+
+        masterTl.to(camera.position, {
+            x: 0, y: 0, z: 1.5,
+            duration: 2, ease: 'power2.inOut'
+        }, 3.5);
+
+        masterTl.to(camera.position, {
+            x: -2, y: -1, z: 4,
+            duration: 1.5, ease: 'power1.inOut'
+        }, 5.5);
+
+        masterTl.to(camera.position, {
+            x: 0, y: 3, z: 6,
+            duration: 1.5, ease: 'power2.inOut'
+        }, 7);
+
+        masterTl.to(camera.position, {
+            x: 0, y: 0, z: 8,
+            duration: 1, ease: 'power2.inOut'
+        }, 8.5);
+
+        // Camera target (smooth follow)
+        masterTl.to(cameraTarget, {
+            x: 0, y: 0, z: 0,
+            duration: 9.5, ease: 'none'
+        }, 0);
+
+        // --- Hero Object Animations ---
+        masterTl.to(heroGroup.rotation, {
+            y: '+=28.27',
+            duration: 9.5, ease: 'none'
+        }, 0);
+
+        masterTl.to(heroGroup.position, {
+            y: 0.5,
+            duration: 4, ease: 'sine.inOut',
+            yoyo: true, repeat: 1
+        }, 0);
+
+        // Material color shifts
+        masterTl.to(bodyMaterial.color, {
+            r: 0.42, g: 0.55, b: 1.0,
+            duration: 3, ease: 'power1.inOut'
+        }, 2);
+
+        masterTl.to(bodyMaterial.color, {
+            r: 0.91, g: 0.63, b: 0.85,
+            duration: 3, ease: 'power1.inOut'
+        }, 5);
+
+        masterTl.to(bodyMaterial.color, {
+            r: 0.61, g: 0.49, b: 0.87,
+            duration: 1.5, ease: 'power1.inOut'
+        }, 8);
+
+        // --- Lighting Animations ---
+        masterTl.to(keyLight.color, {
+            r: 0.42, g: 0.55, b: 1.0,
+            duration: 3, ease: 'power1.inOut'
+        }, 2);
+
+        masterTl.to(keyLight.color, {
+            r: 1, g: 1, b: 1,
+            duration: 2, ease: 'power1.inOut'
+        }, 7);
+
+        masterTl.to(ambientLight.color, {
+            r: 0.42, g: 0.55, b: 1.0,
+            duration: 3, ease: 'power1.inOut'
+        }, 3);
+
+        masterTl.to(rimLight.intensity, {
+            value: 4.0,
+            duration: 1, ease: 'power2.inOut'
+        }, 5);
+
+        masterTl.to(rimLight.intensity, {
+            value: 2.0,
+            duration: 1, ease: 'power2.inOut'
+        }, 6.5);
+
+        // --- Fog Animation ---
+        masterTl.to(scene.fog, {
+            density: 0.01,
+            duration: 3, ease: 'power1.inOut'
+        }, 3);
+
+        masterTl.to(scene.fog, {
+            density: 0.02,
+            duration: 2, ease: 'power1.inOut'
+        }, 7);
+
+        // --- Glow Intensity ---
+        masterTl.to(glowMaterial, {
+            opacity: 0.12,
+            duration: 2, ease: 'power1.inOut'
+        }, 4);
+
+        masterTl.to(glowMaterial, {
+            opacity: 0.05,
+            duration: 2, ease: 'power1.inOut'
+        }, 7);
+
+        // ============================================
+        // TEXT BEAT ANIMATIONS
+        // ============================================
+
+        const textBeats = [
+            { id: 'beat-1', start: 0, end: 0.12, enter: 0, exit: 0.1 },
+            { id: 'beat-2', start: 0.1, end: 0.22, enter: 0.1, exit: 0.2 },
+            { id: 'beat-3', start: 0.2, end: 0.37, enter: 0.2, exit: 0.32 },
+            { id: 'beat-4', start: 0.35, end: 0.52, enter: 0.35, exit: 0.47 },
+            { id: 'beat-5', start: 0.5, end: 0.67, enter: 0.5, exit: 0.62 },
+            { id: 'beat-6', start: 0.65, end: 0.8, enter: 0.65, exit: 0.75 },
+            { id: 'beat-7', start: 0.78, end: 0.92, enter: 0.78, exit: 0.88 },
+            { id: 'beat-8', start: 0.9, end: 1.0, enter: 0.9, exit: 0.98 }
+        ];
+
+        textBeats.forEach((beat, index) => {
+            const el = document.getElementById(beat.id);
+
+            // Enter animation
+            masterTl.fromTo(el, 
+                { opacity: 0, y: 60, filter: 'blur(12px)', scale: 0.95 },
+                { opacity: 1, y: 0, filter: 'blur(0px)', scale: 1, duration: 0.08, ease: 'power2.out' },
+                beat.enter
+            );
+
+            // Exit animation
+            masterTl.to(el, 
+                { opacity: 0, y: -40, filter: 'blur(5px)', duration: 0.06, ease: 'power2.in' },
+                beat.exit
+            );
+        });
+
+        // ============================================
+        // AUDIO SYSTEM
+        // ============================================
+
+        let audioOscillators = [];
+        let audioGainNodes = [];
+
+        function initAudio() {
+            if (state.audioContext) return;
+
+            state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Create ambient drone
+            const frequencies = [110, 164.81, 196.00, 246.94]; // A2, E3, G3, B3 (A minor 7)
+
+            frequencies.forEach((freq, i) => {
+                const osc = state.audioContext.createOscillator();
+                const gain = state.audioContext.createGain();
+                const filter = state.audioContext.createBiquadFilter();
+
+                osc.type = i === 0 ? 'sine' : 'triangle';
+                osc.frequency.value = freq;
+
+                filter.type = 'lowpass';
+                filter.frequency.value = 800;
+                filter.Q.value = 1;
+
+                gain.gain.value = 0;
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(state.audioContext.destination);
+
+                osc.start();
+
+                audioOscillators.push(osc);
+                audioGainNodes.push(gain);
+            });
+        }
+
+        function toggleSound() {
+            if (!state.audioContext) {
+                initAudio();
+            }
+
+            state.soundOn = !state.soundOn;
+            soundBtn.classList.toggle('on', state.soundOn);
+            soundWaves.classList.toggle('active', state.soundOn);
+
+            if (state.soundOn) {
+                if (state.audioContext.state === 'suspended') {
+                    state.audioContext.resume();
+                }
+                audioGainNodes.forEach((gain, i) => {
+                    gain.gain.setTargetAtTime(0.03 + i * 0.01, state.audioContext.currentTime, 1);
+                });
+            } else {
+                audioGainNodes.forEach(gain => {
+                    gain.gain.setTargetAtTime(0, state.audioContext.currentTime, 0.5);
+                });
+            }
+        }
+
+        soundBtn.addEventListener('click', toggleSound);
+
+        // ============================================
+        // INTERACTIVE CONTROLS
+        // ============================================
+
+        // Reimagine button - reset to start
+        reimagineBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Nav links smooth scroll to sections
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetProgress = parseFloat(link.dataset.scroll);
+                const targetScroll = targetProgress * (document.getElementById('scroll-container').offsetHeight - window.innerHeight);
+                window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+            });
+        });
+
+        // ============================================
+        // ANIMATION LOOP
+        // ============================================
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = clock.getElapsedTime();
+            const delta = clock.getDelta();
+
+            // Camera look-at (smooth follow)
+            camera.lookAt(cameraTarget);
+
+            // Hero floating animation
+            heroGroup.position.y = Math.sin(time * 0.5) * 0.2;
+            heroGroup.rotation.x = Math.sin(time * 0.3) * 0.05;
+            heroGroup.rotation.z = Math.cos(time * 0.2) * 0.03;
+
+            // Core pulse
+            heroCore.scale.setScalar(1 + Math.sin(time * 2) * 0.1);
+            coreMaterial.opacity = 0.2 + Math.sin(time * 1.5) * 0.1;
+
+            // Tentacle wave animation
+            tentacles.forEach((tentacle, i) => {
+                const angle = tentacle.userData.angle;
+                const index = tentacle.userData.index;
+
+                tentacle.rotation.z = Math.sin(time * 0.8 + index * 0.5) * 0.15;
+                tentacle.rotation.x = Math.cos(time * 0.6 + index * 0.3) * 0.1;
+
+                // Subtle position shift
+                tentacle.position.x = Math.sin(time * 0.4 + index) * 0.05;
+                tentacle.position.z = Math.cos(time * 0.5 + index) * 0.05;
+            });
+
+            // Particle animation
+            const posArray = particleGeometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+
+                posArray[i3] += velocities[i3];
+                posArray[i3 + 1] += velocities[i3 + 1];
+                posArray[i3 + 2] += velocities[i3 + 2];
+
+                // Gentle orbit around center
+                const x = posArray[i3];
+                const z = posArray[i3 + 2];
+                const orbitSpeed = 0.0003 * (1 + Math.sin(i * 0.1));
+                posArray[i3] = x * Math.cos(orbitSpeed) - z * Math.sin(orbitSpeed);
+                posArray[i3 + 2] = x * Math.sin(orbitSpeed) + z * Math.cos(orbitSpeed);
+
+                // Boundary check - wrap around
+                const dist = Math.sqrt(x*x + posArray[i3+1]*posArray[i3+1] + z*z);
+                if (dist > 12) {
+                    posArray[i3] *= 0.8;
+                    posArray[i3 + 1] *= 0.8;
+                    posArray[i3 + 2] *= 0.8;
+                }
+            }
+            particleGeometry.attributes.position.needsUpdate = true;
+
+            // Particle color shift based on scroll
+            const scrollPhase = state.scrollProgress;
+            const colorArray = particleGeometry.attributes.color.array;
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const noise = Math.sin(i * 0.1 + time * 0.2) * 0.5 + 0.5;
+
+                let r, g, b;
+                if (scrollPhase < 0.33) {
+                    // Purple to pink
+                    r = 0.61 + (0.91 - 0.61) * scrollPhase * 3;
+                    g = 0.49 + (0.63 - 0.49) * scrollPhase * 3;
+                    b = 0.87 + (0.85 - 0.87) * scrollPhase * 3;
+                } else if (scrollPhase < 0.66) {
+                    // Pink to blue
+                    const t = (scrollPhase - 0.33) * 3;
+                    r = 0.91 + (0.42 - 0.91) * t;
+                    g = 0.63 + (0.55 - 0.63) * t;
+                    b = 0.85 + (1.0 - 0.85) * t;
+                } else {
+                    // Blue to purple
+                    const t = (scrollPhase - 0.66) * 3;
+                    r = 0.42 + (0.61 - 0.42) * t;
+                    g = 0.55 + (0.49 - 0.55) * t;
+                    b = 1.0 + (0.87 - 1.0) * t;
+                }
+
+                colorArray[i3] = r * (0.7 + noise * 0.3);
+                colorArray[i3 + 1] = g * (0.7 + noise * 0.3);
+                colorArray[i3 + 2] = b * (0.7 + noise * 0.3);
+            }
+            particleGeometry.attributes.color.needsUpdate = true;
+
+            // Debris animation
+            debrisGroup.children.forEach(debris => {
+                debris.rotation.x += debris.userData.rotSpeed.x;
+                debris.rotation.y += debris.userData.rotSpeed.y;
+                debris.rotation.z += debris.userData.rotSpeed.z;
+
+                debris.position.y += Math.sin(time * debris.userData.floatSpeed + debris.userData.floatOffset) * 0.002;
+            });
+
+            // Glow pulse
+            glowMaterial.opacity = 0.05 + Math.sin(time * 0.8) * 0.03 + state.scrollProgress * 0.05;
+            glowMesh2.material.opacity = 0.02 + Math.sin(time * 0.6) * 0.01 + state.scrollProgress * 0.02;
+
+            // Audio reactivity (if sound is on)
+            if (state.soundOn && state.audioContext) {
+                const intensity = 0.5 + Math.sin(time * 3) * 0.3;
+                glowMaterial.opacity += intensity * 0.02;
+                heroCore.scale.addScalar(Math.sin(time * 4) * 0.005);
+            }
+
+            // Mouse parallax on camera (subtle)
+            if (!state.isMobile) {
+                const parallaxX = (state.mouseX / window.innerWidth - 0.5) * 0.3;
+                const parallaxY = (state.mouseY / window.innerHeight - 0.5) * 0.3;
+                camera.position.x += (parallaxX - camera.position.x) * 0.01;
+                camera.position.y += (-parallaxY - camera.position.y) * 0.01;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // ============================================
+        // RESIZE HANDLER
+        // ============================================
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            state.isMobile = window.innerWidth < 768;
+        });
+
+        // ============================================
+        // KEYBOARD NAVIGATION
+        // ============================================
+
+        document.addEventListener('keydown', (e) => {
+            const scrollStep = (document.getElementById('scroll-container').offsetHeight - window.innerHeight) / 8;
+
+            if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+                window.scrollBy({ top: scrollStep * 0.5, behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+                window.scrollBy({ top: -scrollStep * 0.5, behavior: 'smooth' });
+            } else if (e.key === 'Home') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (e.key === 'End') {
+                window.scrollTo({ top: document.getElementById('scroll-container').offsetHeight, behavior: 'smooth' });
+            }
+        });
+
+        // ============================================
+        // REDUCED MOTION SUPPORT
+        // ============================================
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            // Disable complex animations
+            gsap.globalTimeline.timeScale(0);
+
+            // Show all text
+            document.querySelectorAll('.text-beat').forEach(beat => {
+                beat.style.opacity = '1';
+                beat.style.filter = 'none';
+                beat.style.transform = 'none';
+            });
+
+            // Static camera
+            camera.position.set(0, 0, 5);
+        }
+
+        console.log('🎵 AURA — Cinematic Music Experience loaded');
+    </script>
+</body>
+</html>
